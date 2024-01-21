@@ -1,0 +1,46 @@
+{
+    "kate": {
+        "owner": "kate",
+        "events": [
+            {
+                "title": "my_event",
+                "start_time": "2023-01-01T13:00:00",
+                "end_time": "2023-01-01T13:45:00",
+                "description": "",
+                "recurrence": 3,
+                "participants": [],
+                "organizer": "kate"
+            },
+            {
+                "title": "catch up",
+                "start_time": "2024-01-24T11:00:00",
+                "end_time": "2024-01-24T12:00:00",
+                "description": "",
+                "recurrence": 3,
+                "participants": [],
+                "organizer": "kate"
+            }
+        ],
+        "unprocessed_events": []
+    },
+    "senya": {
+        "owner": "senya",
+        "events": [],
+        "unprocessed_events": [
+            {
+                "title": "catch up",
+                "start_time": "2024-01-24T11:00:00",
+                "end_time": "2024-01-24T12:00:00",
+                "description": "",
+                "recurrence": 3,
+                "participants": [],
+                "organizer": "kate"
+            }
+        ]
+    },
+    "valentin": {
+        "owner": "valentin",
+        "events": [],
+        "unprocessed_events": []
+    }
+}
