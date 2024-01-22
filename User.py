@@ -15,10 +15,10 @@ class User:
         self._notifications = []
 
     def __repr__(self):
-        return self._id
+        return self.username
 
     def __str__(self):
-        return self._id
+        return self.username
 
     def get_password(self):
         return self._password
@@ -37,5 +37,16 @@ class User:
         return self._username
 
     @property
+    def id(self):
+        return self._id
+
+    @property
     def notifications(self):
         return self._notifications
+
+    def __eq__(self, other):
+        if isinstance(other, User):
+            return self.id == other.id
+        return False
+    def __hash__(self):
+        return hash(self.id)

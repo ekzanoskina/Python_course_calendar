@@ -98,6 +98,9 @@ class Interface:
                 Interface.backend.create_user(username, password)
                 print("Учетная запись создана успешно.")
                 Interface.backend.login(username, password)
+                user = Interface.backend.users.get(username)
+                Interface.logged_in_user = user
+                Interface.calendar = Interface.backend.get_calendar(Interface.logged_in_user.username)
                 Interface.backend.save_user_data()
                 Interface.func_request.append(Interface.main_menu)
                 break
@@ -117,6 +120,7 @@ class Interface:
             sleep(1)
             user = Interface.backend.users.get(username)
             Interface.logged_in_user = user
+            print(type(user))
             Interface.calendar = Interface.backend.get_calendar(Interface.logged_in_user.username)
             Interface.backend.save_calendar_data()
             Interface.func_request.append(Interface.show_notifications)
@@ -142,7 +146,7 @@ class Interface:
                 print(event)
                 reply = input()
                 if reply == '1':
-                    event.add_participant(Interface.logged_in_user.username) #  добавление участника в событие, если он согласился участвовать
+                    event.add_participant(Interface.logged_in_user) #  добавление участника в событие, если он согласился участвовать
                     Interface.calendar.mark_event_as_processed(event)
                     Interface.calendar.add_event(event)
 
@@ -240,7 +244,7 @@ class Interface:
         recurrence = input_with_validation("Введите частоту повторений событий (0: никогда, 1: каждый день, 2: каждую неделю, 3: каждый месяц, 4: каждый год): ",
             Interface.backend.validate_recurrence)
         description = input("Введите описание события или оставьте поле пустым: ")
-        organizer = Interface.logged_in_user.username
+        organizer = Interface.logged_in_user
         new_event = Event(title, start_time, end_time, description, recurrence=recurrence, organizer=organizer)
         Interface.calendar.add_event(new_event)
         print('Событие успешно создано и добавлено в Ваш календарь.')
@@ -250,7 +254,7 @@ class Interface:
             if user_input is None:
                 break
             try:
-                Interface.backend.invite_participants(Interface.logged_in_user.username, new_event, user_input)
+                Interface.backend.invite_participants(Interface.logged_in_user, new_event, user_input)
                 break
             except Exception as e:
                 print(f'Ошибка: {str(e)}')
@@ -298,7 +302,6 @@ class Interface:
             Interface.logged_in_user = None
             Interface.func_request.append(Interface.start)
         elif logout_confirmation == 'нет':
-            Interface.logged_in_user = None
             Interface.func_request.append(Interface.main_menu)
         else:
             print('Введите корректный ответ')
@@ -311,7 +314,7 @@ class Interface:
             print(i, event)
         user_input = input('Введите номер события, которые хотите изменить.')
         participants = input('Введите участников, которых хотите удалить.')
-        Interface.backend.remove_participant(Interface.logged_in_user.username, all_events[int(user_input)], Interface.backend.validate_participants(participants))
+        Interface.backend.remove_participant(Interface.logged_in_user, all_events[int(user_input)], Interface.backend.validate_participants(participants))
         Interface.backend.save_calendar_data()
         Interface.backend.save_user_data()
 

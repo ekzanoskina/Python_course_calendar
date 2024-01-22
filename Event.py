@@ -19,7 +19,7 @@ import json
 
 from dateutil.rrule import DAILY, WEEKLY, MONTHLY, YEARLY
 
-from Python_course_calendar.User import User
+from User import User
 
 
 class Event:
@@ -29,14 +29,16 @@ class Event:
     events_map = {}
 
     def __init__(self, title, start_time=None, end_time=None, description="", participants=None, recurrence=None,
-                 organizer=''):
+                 organizer=None):
         self.title = title
         self._start_time = start_time
         self._end_time = end_time
         self.description = description
         self._participants = participants or []
-        self.recurrence = self.formate_recurrence(recurrence)
         self.organizer = organizer
+        if isinstance(self.organizer, User):
+            self._participants.insert(0, organizer)  # Insert organizer at the beginning of the participants list
+        self.recurrence = recurrence
         Event.events_map[self.get_unique_id()] = self
 
     @property
@@ -66,20 +68,23 @@ class Event:
             self._participants = list(unique_participants)
 
 
-    @staticmethod
-    def create_or_get_event(data):
-        if "start_time" in data:
-            data['start_time'] = datetime.fromisoformat(data["start_time"])
-        if "end_time" in data:
-            data['end_time'] = datetime.fromisoformat(data["end_time"])
-        event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time', '').isoformat() if data.get('start_time') else ''}"
+    @classmethod
+    def create_or_get_event(cls, data, backend):
+        """
+        Create an Event instance from its serialized dictionary representation.
+        """
+        data['start_time'] = datetime.fromisoformat(data["start_time"]) if data['start_time'] else None
+        data['end_time'] = datetime.fromisoformat(data["end_time"]) if data['end_time'] else None
+        data['participants'] = [backend.users[username] for username in data['participants']] if data[
+            'participants'] else None
+        data['organizer'] = backend.users.get(data['organizer']) if data['organizer'] else None
+        event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time').isoformat() if data.get('start_time') else ''}"
         if event_id in Event.events_map:
-            existing_event = Event.events_map[event_id]
+            existing_event = cls.events_map[event_id]
             existing_event.update_event(**data)
             return existing_event
         else:
-            return Event(**data)
-
+            return cls(**data)
 
     @property
     def start_time(self):
@@ -93,10 +98,6 @@ class Event:
             self._start_time = start_time
 
     @property
-    def end_time(self):
-        return self._end_time
-
-    @property
     def participants(self):
         return self._participants
 
@@ -104,6 +105,10 @@ class Event:
     def participants(self, participants):
         if isinstance(participants, list):
             self._participants.extend(participants)
+
+    @property
+    def end_time(self):
+        return self._end_time
 
     @end_time.setter
     def end_time(self, end_time):
@@ -115,7 +120,7 @@ class Event:
     @staticmethod
     def formate_recurrence(recurrence):
         """Проверить, что введенная частота повторений соответствует одному из допустимых значений."""
-        recurrence_dct = {i: freq for i, freq in enumerate([0, DAILY, WEEKLY, MONTHLY, YEARLY])}
+        recurrence_dct = {i: freq for i, freq in zip(range(5), ['once', 'daily', 'weekly', 'monthly', 'yearly'])}
         return recurrence_dct[int(recurrence)]
 
     @staticmethod
@@ -129,12 +134,12 @@ class Event:
     def to_dict(self):
         return {
             "title": self.title,
-            "start_time": self.start_time.isoformat() if self.start_time else None,
-            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "start_time": self._start_time.isoformat() if self._start_time else None,
+            "end_time": self._end_time.isoformat() if self._end_time else None,
             "description": self.description,
             "recurrence": self.recurrence,
-            "participants": self.participants,
-            "organizer": self.organizer
+            "participants": [participant.username for participant in self._participants],
+            "organizer": self.organizer.username if self.organizer else None
         }
 
     def __repr__(self):
@@ -153,8 +158,6 @@ class Event:
 Участники: {self.participants},
 Периодичность: {self.recurrence}""")
 
-
-
     def generate_periodic_event(self, start_time, end_time):
         event_copy = Event(title=self.title, description=self.description, recurrence=self.recurrence,
                            organizer=self.organizer)
@@ -165,24 +168,23 @@ class Event:
     def get_timing(self):
         return self.end_time - self.start_time
 
-    def add_participant(self, participant):
+    def add_participant(self, participant: User):
         if participant not in self._participants:
             self._participants.append(participant)
         else:
             raise TypeError('Участник уже был добавлен в событие')
 
-
-    def remove_participant(self, user):
+    def remove_participant(self, user: User):
         if user in self._participants:
             self._participants.remove(user)
         # else:
         #     raise PermissionError('Добавлять участников может только организатор.')
+
     def __eq__(self, other):
         if isinstance(other, Event):
             return self.title == other.title and self.start_time == other.start_time and \
-                    self.end_time == other.end_time and self.organizer == other.organizer
+                self.end_time == other.end_time and self.organizer == other.organizer
         return False
 
-# event = Event(title="Meeting", start_time="01.01.2023 13:00", end_time="01.01.2023 14:00", description="Team meeting", recurrence='1')
-# print(type(event.start_time))
-# event.to_json()
+
+

@@ -40,9 +40,6 @@ class Backend:
 
         return cls.__instance
 
-    def __init__(self):
-        self.unprocessed_events = {}
-
     def load_user_data(self):
         """Load data from CSV files into the class variables."""
         # Load users from the CSV file
@@ -72,7 +69,7 @@ class Backend:
     def load_calendar_data(self):
         if os.path.exists('calendars.json'):
             with open('calendars.json', 'r') as f:
-                self.calendars = {username: Calendar.from_dict(calendar_data) for username, calendar_data in
+                self.calendars = {username: Calendar.from_dict(calendar_data, self) for username, calendar_data in
                                   json.load(f).items()}
 
 
@@ -133,7 +130,7 @@ class Backend:
     def validate_recurrence(recurrence):
         """Проверить, что введенная частота повторений соответствует одному из допустимых значений."""
         if recurrence in ('0', '1', '2', '3', '4'):
-            return True
+            return Event.formate_recurrence(recurrence)
         else:
             raise ValueError('Некорретный ввод.')
 
@@ -141,10 +138,11 @@ class Backend:
     def invite_participants(self, user, event, participants):
         if user == event.organizer:
             for participant in participants:
-                if participant in self.calendars:
+                print(type(participant))
+                if participant.username in self.calendars:
                     try:
-                        self.calendars[participant].add_unprocessed_events(event)
-                        self.users.get(participant).notify(f"Вы были приглашены на мероприятие '{event.title}'.")
+                        self.calendars[participant.username].add_unprocessed_events(event)
+                        participant.notify(f"Вы были приглашены на мероприятие '{event.title}'.")
                     except Exception as e:
                         print(str(e))
         else:
@@ -167,7 +165,7 @@ class Backend:
         if participants:
             participants_list = participants.split()
             if all(self.check_username_exists(username) for username in participants_list):
-                return participants_list
+                return [self.users.get(participant) for participant in participants_list]
             else:
                 raise ValueError('Пользователь(-и) не найден(-ы). Попробуйте еще раз')
 
@@ -175,7 +173,3 @@ class Backend:
         pass
 
 
-backend = Backend()
-backend.load_calendar_data()
-backend.load_user_data()
-print(backend.users, backend.calendars)
