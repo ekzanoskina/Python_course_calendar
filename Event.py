@@ -27,10 +27,13 @@ class Event:
     An Event class representing an event with a title, description, participants, and occurrence type.
     """
     events_map = {}
+    count = 1
 
     def __init__(self, title, start_time=None, end_time=None, description="", participants=None, recurrence=None,
                  organizer=None):
         self.title = title
+        self._event_id = Event.count
+        Event.count += 1 # создание уникального id
         self._start_time = start_time
         self._end_time = end_time
         self.description = description
@@ -39,7 +42,7 @@ class Event:
         if isinstance(self.organizer, User):
             self._participants.insert(0, organizer)  # Insert organizer at the beginning of the participants list
         self.recurrence = recurrence
-        Event.events_map[self.get_unique_id()] = self
+        Event.events_map[self._event_id] = self
 
     @property
     def start_time(self):
@@ -49,10 +52,10 @@ class Event:
     def participants(self):
         return self._participants
 
-    def get_unique_id(self):
-        # Ensure the start time is in ISO format for consistent unique IDs
-        formatted_start_time = self.start_time.isoformat() if self.start_time else ''
-        return f"{self.title}-{self.organizer}-{formatted_start_time}"
+    # def get_unique_id(self):
+    #     # Ensure the start time is in ISO format for consistent unique IDs
+    #     formatted_start_time = self.start_time.isoformat() if self.start_time else ''
+    #     return f"{self.title}-{self.organizer}-{formatted_start_time}"
 
     def update_event(self, **kwargs):
         # Handle the participant updates separately to avoid issues
@@ -78,7 +81,9 @@ class Event:
         data['participants'] = [backend.users[username] for username in data['participants']] if data[
             'participants'] else None
         data['organizer'] = backend.users.get(data['organizer']) if data['organizer'] else None
-        event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time').isoformat() if data.get('start_time') else ''}"
+        # event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time').isoformat() if data.get('start_time') else ''}"
+        event_id = data['event_id']
+        data.pop('event_id')
         if event_id in Event.events_map:
             existing_event = cls.events_map[event_id]
             existing_event.update_event(**data)
@@ -133,6 +138,7 @@ class Event:
 
     def to_dict(self):
         return {
+            "event_id": self._event_id,
             "title": self.title,
             "start_time": self._start_time.isoformat() if self._start_time else None,
             "end_time": self._end_time.isoformat() if self._end_time else None,
