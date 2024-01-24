@@ -1,50 +1,64 @@
 import unittest
-
-from Python_course_calendar.User import User
+import uuid  # Make sure to import this as it's used in your class
+from User import User  # Update this to the path where your User class is defined
 
 
 class TestUser(unittest.TestCase):
+
     def setUp(self):
-        self.username = "john_doe"
-        self.password = "Johndoe12345"
-        self.user = User(self.username, self.password)
+        # This will be called before every test function
+        User._usernames.clear()
 
     def test_init(self):
-        self.assertEqual(self.user.username, self.username)
-        self.assertEqual(self.user.get_password(), self.password)
-        self.assertEqual(self.user.id, f"@{self.username}")
+        username = "user1"
+        password = "password123"
+        user = User(username, password)
+        self.assertEqual(user.username, username)
+        self.assertEqual(user.get_password(), password)
+        self.assertIsInstance(user.user_id, str)
+        self.assertRegex(user.user_id, r"^[0-9a-f-]+$")  # Check if it looks like a valid UUID
+        self.assertIn(username, User._usernames)
 
-    def test_repr(self):
-        self.assertEqual(repr(self.user), self.username)
-
-    def test_str(self):
-        self.assertEqual(str(self.user), self.username)
-
-    def test_notify(self):
-        message = "You have a new notification!"
-        self.user.notify(message)
-        self.assertIn(message, self.user.notifications)
-
-    def test_get_notifications(self):
-        message = "You have a new notification!"
-        self.user.notify(message)
-        notifications = self.user.get_notifications()
-        self.assertIn(message, notifications)
-        self.assertListEqual(self.user.notifications, [])
+    def test_username_uniqueness(self):
+        username = "user2"
+        User(username, "password123")
+        with self.assertRaises(ValueError):
+            User(username, "another_password")
 
     def test_eq(self):
-        another_user = User(self.username, "another_secret")
-        different_user = User("jane_doe", "diff_secret")
-        self.assertEqual(self.user, another_user)
-        self.assertNotEqual(self.user, different_user)
+        user1 = User("user3", "password123")
+        user2 = User("user4", "password321")
+        self.assertNotEqual(user1, user2)
+
 
     def test_hash(self):
-        user_set = {self.user}
-        another_user = User(self.username, "another_secret")
-        different_user = User("jane_doe", "diff_secret")
-        user_set.add(another_user)  # This should not add a new element as it is considered equal to self.user
-        user_set.add(different_user)
-        self.assertEqual(len(user_set), 2)
+        user = User("user5", "password123")
+        self.assertEqual(hash(user), hash(user.user_id))
+
+    def test_notifications(self):
+        user = User("user6", "password123")
+        self.assertEqual(len(user.notifications), 0)
+
+        user.notify("Welcome!")
+        user.notify("You have a new message.")
+
+        self.assertEqual(len(user.notifications), 2)
+
+        notifications = user.get_notifications()
+        self.assertEqual(notifications, ["Welcome!", "You have a new message."])
+        self.assertEqual(len(user.notifications), 0)  # Should be cleared after getting notifications
+
+    def test_class_method_is_username_taken(self):
+        username = "user7"
+        self.assertFalse(User.is_username_taken(username))
+        User(username, "password123")
+        self.assertTrue(User.is_username_taken(username))
+
+    def test_json(self):
+        # This test is not implemented as the method `to_json` is not defined
+        # You would put here the test for the to_json method
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

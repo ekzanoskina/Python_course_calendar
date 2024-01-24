@@ -13,11 +13,14 @@ from dateutil.rrule import rrule, WEEKLY, DAILY, MONTHLY, YEARLY
 from Event import Event
 from collections import defaultdict
 
+from User import User
+
+
 class RepetitionError(Exception):
     pass
 
 class Calendar:
-    def __init__(self, owner=None):
+    def __init__(self, owner:str):
         self._events = []
         self._unprocessed_events = []
         self._owner = owner

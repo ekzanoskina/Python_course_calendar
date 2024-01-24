@@ -30,7 +30,7 @@ class Event:
     count = 1
 
     def __init__(self, title, start_time=None, end_time=None, description="", participants=None, recurrence=None,
-                 organizer=None):
+                 organizer:User=None):
         self.title = title
         self._event_id = Event.count
         Event.count += 1 # создание уникального id
@@ -39,8 +39,8 @@ class Event:
         self.description = description
         self._participants = participants or []
         self.organizer = organizer
-        if isinstance(self.organizer, User):
-            self._participants.insert(0, organizer)  # Insert organizer at the beginning of the participants list
+        if isinstance(self.organizer, User) and self.organizer not in self._participants:
+            self._participants.insert(0, self.organizer)  # Insert organizer at the beginning of the participants list
         self.recurrence = recurrence
         Event.events_map[self._event_id] = self
 
@@ -48,6 +48,9 @@ class Event:
     def start_time(self):
         return self._start_time
 
+    @property
+    def event_id(self):
+        return self._event_id
     @property
     def participants(self):
         return self._participants
@@ -82,8 +85,7 @@ class Event:
             'participants'] else None
         data['organizer'] = backend.users.get(data['organizer']) if data['organizer'] else None
         # event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time').isoformat() if data.get('start_time') else ''}"
-        event_id = data['event_id']
-        data.pop('event_id')
+        event_id = data.pop('event_id')
         if event_id in Event.events_map:
             existing_event = cls.events_map[event_id]
             existing_event.update_event(**data)
@@ -183,14 +185,27 @@ class Event:
     def remove_participant(self, user: User):
         if user in self._participants:
             self._participants.remove(user)
+        else:
+            raise NotImplemented
         # else:
         #     raise PermissionError('Добавлять участников может только организатор.')
 
     def __eq__(self, other):
         if isinstance(other, Event):
-            return self.title == other.title and self.start_time == other.start_time and \
-                self.end_time == other.end_time and self.organizer == other.organizer
+            return self.event_id == other.event_id
         return False
 
+    @classmethod
+    def delete_event(cls, event):
+        """
+        Deletes an event from the events_map.
+
+        :param event_id: Unique identifier of the event to be deleted.
+        """
+        if event.event_id in cls.events_map:
+            print(event.event_id)
+            del cls.events_map[event.event_id]
+        else:
+            raise ValueError(f"No event found with event_id {event.event_id}")
 
 

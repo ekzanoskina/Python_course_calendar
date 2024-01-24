@@ -16,16 +16,18 @@ from dateutil.rrule import rrule, DAILY
 locale.setlocale(locale.LC_ALL, "")
 
 from Backend import Backend
+
 from Calendar import Calendar
 from Event import Event
 from User import User
 
 from time import sleep, strftime, localtime
+
+
 class Interface:
-    calendar = None
     backend = None
     state = "start"
-    logged_in_user = None
+
     func_request = list()
 
     @staticmethod
@@ -51,22 +53,13 @@ class Interface:
 
     @staticmethod
     def manage_user():
-        print("Что бы вы хотели сделать?")
-        user_choice = input(
-"""1: Войти в систему, 
-2: Создать нового пользователя,
-3: Закончить работу.
-Введите соответствующую цифру: """
-        )
+        user_choice = Interface.backend.input_with_validation("""Что Вы бы хотели сделать?\n1: Войти в систему,\n2: Создать нового пользователя,\n3: Закончить работу.\nВведите соответствующую цифру: """, Interface.backend.validate_number_input)
         if user_choice == '1':
             Interface.func_request.append(Interface.login)
         elif user_choice == '2':
             Interface.func_request.append(Interface.create_user)
         elif user_choice == '3':
             return
-        else:
-            raise Exception('Введите цифру от 1 до 3.')
-        print(Interface.func_request)
 
     @staticmethod
     def create_user():
@@ -86,28 +79,15 @@ class Interface:
                     continue
             else:
                 # Пользователя нет в системе, предлагаем создать новый пароль
-                def create_password():
-                    while True:
-                        password = input(
-                        """Придумайте пароль.Пароль должен содержать восемь и более символов,\nвключая не менее одной цифры, одной буквы в верхнем регистре и одной буквы в нижнем регистре.\n""")
-                        try:
-                            return Interface.backend.validate_by_regexp(password)
-                        except Exception as e:
-                            print(str(e))
-                password = create_password()
+                password = Interface.backend.input_with_validation(
+                    """Придумайте пароль.Пароль должен содержать восемь и более символов,\nвключая не менее одной цифры, одной буквы в верхнем регистре и одной буквы в нижнем регистре.\n""",
+                    Interface.backend.validate_pass_by_regexp)
                 Interface.backend.create_user(username, password)
-                print("Учетная запись создана успешно.")
-                Interface.backend.login(username, password)
-                user = Interface.backend.users.get(username)
-                Interface.logged_in_user = user
-                Interface.calendar = Interface.backend.get_calendar(Interface.logged_in_user.username)
                 Interface.backend.save_user_data()
                 Interface.func_request.append(Interface.main_menu)
                 break
 
         # Interface.func_request.append(Interface.manage_user)
-
-
 
     @staticmethod
     def login(username=None):
@@ -116,12 +96,7 @@ class Interface:
         password = input('Введите пароль: ')
         try:
             Interface.backend.login(username, password)
-            print(f'Добро пожаловать, {username}!')
             sleep(1)
-            user = Interface.backend.users.get(username)
-            Interface.logged_in_user = user
-            print(type(user))
-            Interface.calendar = Interface.backend.get_calendar(Interface.logged_in_user.username)
             Interface.backend.save_calendar_data()
             Interface.func_request.append(Interface.show_notifications)
             Interface.func_request.append(Interface.manage_unprocessed_evens)
@@ -132,76 +107,47 @@ class Interface:
             Interface.func_request.append(Interface.manage_user)
 
     @staticmethod
-    def show_notifications():
-        notifications = Interface.logged_in_user.get_notifications()
-        print("Ваши уведомления:")
-        for notification in notifications:
-            print(notification)
-    @staticmethod
     def manage_unprocessed_evens():
-        unprocessed_events = Interface.calendar.get_unprocessed_events()
+        unprocessed_events = Interface.backend.manage_unprocessed_evens()
         if unprocessed_events:
-            print('У вас есть необработанные события.\nДалее по одному будут показаны события, на которые вас пригласили.\n Введите 1: чтобы добавить событие в свой календарь,\n 2: чтобы отказаться от участия.\n 3: чтобы ответить позже.\n')
+            print(
+                'У вас есть необработанные события.\nДалее по одному будут показаны события, на которые вас пригласили.')
             for event in unprocessed_events:
                 print(event)
-                reply = input()
+                reply = Interface.backend.input_with_validation(
+                    'Введите\n1: чтобы добавить событие в свой календарь,\n2: чтобы отказаться от участия.\n3: чтобы ответить позже.',
+                    Interface.backend.validate_number_input)
                 if reply == '1':
-                    event.add_participant(Interface.logged_in_user) #  добавление участника в событие, если он согласился участвовать
-                    Interface.calendar.mark_event_as_processed(event)
-                    Interface.calendar.add_event(event)
-
-                    print('Событие успешно добавлено в Ваш календарь. Другие участники получат уведомление о том, что вы присоединитесь к собранию.')
-                    # отправка уведомления о добавлении нового участника
+                    Interface.backend.accept_invitation(event)
                 elif reply == '2':
-                    Interface.calendar.mark_event_as_processed(event)
+                    Interface.backend.decline_invitation(event)
                 elif reply == '3':
                     continue
-                else:
-                    raise ValueError
         Interface.backend.save_calendar_data()
         Interface.func_request.append(Interface.main_menu)
 
-
     @staticmethod
     def main_menu():
-        menu_options = [Interface.show_calendar, Interface.get_today_events, Interface.get_coming_events, Interface.get_events_in_range, Interface.create_event, Interface.delete_event, Interface.add_paticipants, Interface.show_all_event, Interface.logout]
+        menu_options = [Interface.show_calendar, Interface.get_today_events, Interface.get_coming_events,
+                        Interface.get_events_in_range, Interface.create_event, Interface.change_event,
+                        Interface.leave_event, Interface.logout]
         Interface.state = "read"
-        ans = input("""Что вы хотите сделать?
+        ans = Interface.backend.input_with_validation("""Что вы хотите сделать?
 1: Посмотреть календарь на текущий месяц,
 2: Посмотреть события на текущую дату,
 3: Посмотреть события на ближайшую неделю, 
 4: Посмотреть события из промежутка времени,
 5: Создать событие,
-6: Добавить участников,
-7: Удалить событие,
-8: Удалить участников из события,
-9: Выйти из системы.
-""")
-        if ans.isdigit() and 0 < int(ans) <= len(menu_options):
-            Interface.func_request.append(menu_options[int(ans) - 1])
-        else:
-            raise ValueError
-
-
+6: Изменить или удалить событие (доступно только организатору), 
+7: Покинуть событие,
+8: Выйти из системы.
+""", Interface.backend.validate_number_input)
+        Interface.func_request.append(menu_options[int(ans) - 1])
 
     @staticmethod
     def get_today_events():
-        print("Календарь запускается...")
-        sleep(1)  # Пауза в 1 секунду
-        # Вывод текущей даты
-        print("Сегодняшняя дата: " + strftime("%A %d %b, %Y", localtime()))
-        # Вывод текущего времени
-        print("Текущее время: " + strftime("%H:%M", localtime()))
-        sleep(1)  # Пауза в 1 секунду
-        current_date = datetime.now().date()
-        start_of_day = datetime.combine(current_date, time.min)
-        end_of_day = datetime.combine(current_date, time(23, 59))
-        today_events = Interface.calendar.get_events_in_range(start_of_day, end_of_day)
-        print(f'События на сегодня:')
-        for event in today_events:
-            print(event)
+        Interface.backend.get_today_events()
         Interface.func_request.append(Interface.main_menu)
-
 
     @staticmethod
     def show_calendar():
@@ -217,44 +163,35 @@ class Interface:
         print(cal_str)
         Interface.func_request.append(Interface.main_menu)
 
-
-
     @staticmethod
     def create_event():
         title = input("Введите название события: ")
-        def input_with_validation(prompt, validation_func):
-            while True:
-                user_input = input(prompt)
-                try:
-                    return validation_func(user_input)
-                except Exception as e:
-                    print(f'Ошибка: {str(e)}')
-
 
         while True:
-            start_time = input_with_validation("Введите время начала события в формате dd.mm.yyyy hh:mm: ", Interface.backend.validate_date_format)
-            end_time = input_with_validation("Введите время окончания события в формате dd.mm.yyyy hh:mm: ",
-                                           Interface.backend.validate_date_format)
+            start_time = Interface.backend.input_with_validation(
+                "Введите время начала события в формате dd.mm.yyyy hh:mm: ", Interface.backend.validate_date_format)
+            end_time = Interface.backend.input_with_validation(
+                "Введите время окончания события в формате dd.mm.yyyy hh:mm: ", Interface.backend.validate_date_format)
             try:
                 Interface.backend.compare_dates(start_time, end_time)
                 break
             except Exception as e:
                 print(f'Ошибка: {str(e)}')
 
-        recurrence = input_with_validation("Введите частоту повторений событий (0: никогда, 1: каждый день, 2: каждую неделю, 3: каждый месяц, 4: каждый год): ",
+        recurrence = Interface.backend.input_with_validation(
+            "Введите частоту повторения события (0: никогда, 1: каждый день, 2: каждую неделю, 3: каждый месяц, 4: каждый год): ",
             Interface.backend.validate_recurrence)
         description = input("Введите описание события или оставьте поле пустым: ")
-        organizer = Interface.logged_in_user
-        new_event = Event(title, start_time, end_time, description, recurrence=recurrence, organizer=organizer)
-        Interface.calendar.add_event(new_event)
-        print('Событие успешно создано и добавлено в Ваш календарь.')
+        new_event = Interface.backend.create_event(title=title, start_time=start_time, end_time=end_time,
+                                                   description=description, recurrence=recurrence)
         while True:
-            user_input = input_with_validation("Если хотите пригласить участников на мероприятие, введите их имена пользователей через пробел, в противном случае оставьте поле пустым",
-                                           Interface.backend.validate_participants)
+            user_input = Interface.backend.input_with_validation(
+                "Если хотите пригласить участников на мероприятие, введите их имена пользователей через пробел, в противном случае оставьте поле пустым",
+                Interface.backend.validate_participants)
             if user_input is None:
                 break
             try:
-                Interface.backend.invite_participants(Interface.logged_in_user, new_event, user_input)
+                Interface.backend.invite_participants(new_event, user_input)
                 break
             except Exception as e:
                 print(f'Ошибка: {str(e)}')
@@ -262,61 +199,157 @@ class Interface:
 
         sleep(1)
         Interface.func_request.append(Interface.main_menu)
-    @staticmethod
-    def delete_event():
-        pass
 
-    @staticmethod
-    def add_paticipants():
-        pass
-    #     try:
-    #
-    #     except Exception as e:
-    #         print(f'Ошибка: {str(e)}')
 
 
     @staticmethod
     def get_coming_events():
-        coming_events = Interface.calendar.get_coming_events()
-        if coming_events:
-            print('Предстоящие события:')
-            for date, events in coming_events.items():
-                print()
-                print(date)
-                for event in sorted(events, key=lambda x: x.start_time):
-                    print(f'{event.start_time.strftime("%H:%M")} - {event.end_time.strftime("%H:%M")}: {event.title}')
-        else:
-            print('У вас нет событий на ближайшую неделю.')
+        Interface.backend.get_coming_events()
+        Interface.func_request.append(Interface.main_menu)
 
     @staticmethod
     def get_events_in_range():
-        start_date = input("Введите начало интервала в формате dd.mm.yyyy hh:mm: ")
-        end_date = input("Введите конец интервала в формате dd.mm.yyyy hh:mm: ")
-        print(Interface.calendar.get_events_in_range(Event.formate_date(start_date), Event.formate_date(end_date)))
+        while True:
+            start_time = Interface.backend.input_with_validation(
+                "Введите начало интервала в формате dd.mm.yyyy hh:mm: ",
+                Interface.backend.validate_date_format)
+            end_time = Interface.backend.input_with_validation("Введите конец интервала в формате dd.mm.yyyy hh:mm: ",
+                                                               Interface.backend.validate_date_format)
+            try:
+                Interface.backend.compare_dates(start_time, end_time)
+                break
+            except Exception as e:
+                print(f'Ошибка: {str(e)}')
+        events_in_range = Interface.backend.get_events_in_range(start_time, end_time)
+        print(events_in_range)
         Interface.func_request.append(Interface.main_menu)
 
     @staticmethod
     def logout():
-        logout_confirmation = input('Вы действительно хотите выйти? (да/нет): ').lower()
+        logout_confirmation = Interface.backend.input_with_validation('Вы действительно хотите выйти? (да/нет): ',
+                                                                      Interface.backend.validate_str_input)
         if logout_confirmation == 'да':
-            Interface.logged_in_user = None
+            Interface.backend.logout()
             Interface.func_request.append(Interface.start)
         elif logout_confirmation == 'нет':
             Interface.func_request.append(Interface.main_menu)
-        else:
-            print('Введите корректный ответ')
-            Interface.func_request.append(Interface.logout)
 
     @staticmethod
-    def show_all_event():
-        all_events = Interface.backend.calendars[Interface.logged_in_user.username].events
-        for i, event in enumerate(all_events, 1):
-            print(i, event)
-        user_input = input('Введите номер события, которые хотите изменить.')
-        participants = input('Введите участников, которых хотите удалить.')
-        Interface.backend.remove_participant(Interface.logged_in_user, all_events[int(user_input)], Interface.backend.validate_participants(participants))
+    def change_event():
+        all_events = Interface.backend.show_all_events()
+        if all_events:
+            prompt = ''
+            for i, event in enumerate(all_events, 1):
+                prompt += f'{i}: {event}\n'
+            user_choice = Interface.backend.input_with_validation(
+                f'{prompt}Введите номер события, которое хотите изменить.', Interface.backend.validate_number_input)
+            event_for_change = all_events[int(user_choice) - 1]
+            user_request = Interface.backend.input_with_validation("""Выберите, что хотите сделать:
+1: изменить название, 
+2: изменить дату и время начала и окончания,
+3: изменить частоту,
+4: изменить описание, 
+5: удалить участников, 
+6: добавить участников, 
+7: удалить событие, 
+8: вернуться в главное меню.""", Interface.backend.validate_number_input)
+            if user_request == '1':
+                print(f'Текущие название: {event_for_change.title}')
+                title = input("Введите новое название события: ")
+                Interface.backend.update_event(event_for_change, title=title)
+            elif user_request == '2':
+                print(f'Текущие значения даты и времени: {event_for_change.start_time}, {event_for_change.end_time}')
+                while True:
+                    start_time = Interface.backend.input_with_validation(
+                        "Введите новое время начала события в формате dd.mm.yyyy hh:mm: ",
+                        Interface.backend.validate_date_format)
+                    end_time = Interface.backend.input_with_validation(
+                        "Введите новое время окончания события в формате dd.mm.yyyy hh:mm: ",
+                        Interface.backend.validate_date_format)
+                    try:
+                        Interface.backend.compare_dates(start_time, end_time)
+                        break
+                    except Exception as e:
+                        print(f'Ошибка: {str(e)}')
+                Interface.backend.update_event(event_for_change, start_time=start_time, end_time=end_time)
+            elif user_request == '3':
+                recurrence = Interface.backend.input_with_validation(
+                    "Введите новую частоту повторения события (0: никогда, 1: каждый день, 2: каждую неделю, 3: каждый месяц, 4: каждый год): ",
+                    Interface.backend.validate_recurrence)
+                Interface.backend.update_event(event_for_change, recurrence=recurrence)
+            elif user_request == '4':
+                description = input("Введите новое описание события или оставьте поле пустым: ")
+                Interface.backend.update_event(event_for_change, description=description)
+            elif user_request == '5':
+                while True:
+                    user_input = Interface.backend.input_with_validation(
+                        "Чтобы удалить участников из события, введите их имена пользователей через пробел, в противном случае оставьте поле пустым",
+                        Interface.backend.validate_participants)
+                    if user_input is None:
+                        break
+                    try:
+                        Interface.backend.remove_participants(event_for_change, user_input)
+                        break
+                    except Exception as e:
+                        print(f'Ошибка: {str(e)}')
+            elif user_request == '6':
+                while True:
+                    user_input = Interface.backend.input_with_validation(
+                        "Чтобы пригласить новых участников, введите их имена пользователей через пробел, в противном случае оставьте поле пустым",
+                        Interface.backend.validate_participants)
+                    if user_input is None:
+                        break
+                    try:
+                        Interface.backend.invite_participants(event_for_change, user_input)
+                        break
+                    except Exception as e:
+                        print(f'Ошибка: {str(e)}')
+            elif user_request == '7':
+                delete_confirmation = Interface.backend.input_with_validation(
+                    'Вы действительно хотите удалить событие? (да/нет): ', Interface.backend.validate_str_input)
+                if delete_confirmation == 'да':
+                    try:
+                        Interface.backend.delete_event(event_for_change)
+                    except Exception as e:
+                        print(str(e))
+                elif delete_confirmation == 'нет':
+                    Interface.func_request.append(Interface.main_menu)
+                    Interface.func_request.append(Interface.main_menu)
+        else:
+            print('У вас пока нет ни одного события.')
         Interface.backend.save_calendar_data()
-        Interface.backend.save_user_data()
+        Interface.func_request.append(Interface.main_menu)
+
+    @staticmethod
+    def leave_event():
+        all_events = Interface.backend.show_all_events()
+        if all_events:
+            prompt = ''
+            for i, event in enumerate(all_events, 1):
+                prompt += f'{i}: {event}\n'
+            user_choice = Interface.backend.input_with_validation(
+                f'{prompt}Введите номер события, которое хотите покинуть.\nВы можете покинуть событие только в том случае, если вы не являетесь его организатором.',
+                Interface.backend.validate_number_input)
+            event_for_change = all_events[int(user_choice) - 1]
+        leave_confirmation = Interface.backend.input_with_validation(
+            'Вы действительно хотите покинуть событие? (да/нет): ', Interface.backend.validate_str_input)
+        if leave_confirmation == 'да':
+            Interface.backend.leave_event(event_for_change)
+            Interface.func_request.append(Interface.start)
+        elif leave_confirmation == 'нет':
+            Interface.func_request.append(Interface.main_menu)
+        Interface.backend.save_calendar_data()
+
+    @staticmethod
+    def show_notifications():
+        pass
+        # notifications = Interface.logged_in_user.get_notifications()
+        # print("Ваши уведомления:")
+        # for notification in notifications:
+        #     print(notification)
+
+    # Interface.backend.save_calendar_data()
+    # Interface.backend.save_user_data()
 
 
 Interface.work()

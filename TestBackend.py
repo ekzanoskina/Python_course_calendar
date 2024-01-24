@@ -104,8 +104,8 @@ class TestBackend(unittest.TestCase):
         organizer = User("organizer", "password")
         participant = User("participant", "password")
         event = Event("Event", datetime.now(), datetime.now(), "Description", organizer)
-        calendar = Calendar()
-        calendar.add_unprocessed_events =Calendar()
+        # calendar = Calendar(organizer)
+        # calendar.add_unprocessed_events =Calendar(organizer)
 
         backend.users[participant.username] = participant
         backend.calendars[participant.username] = calendar
@@ -115,6 +115,30 @@ class TestBackend(unittest.TestCase):
             calendar.add_unprocessed_events.assert_called_with(event)
         except Exception as e:
             self.fail(f"invite_participants unexpectedly raised an exception {e}")
+
+        def test_validate_by_regexp_valid(self):
+            """Тест валидного пароля"""
+            self.assertEqual(Backend.validate_by_regexp('Valid123'), 'Valid123')
+
+        def test_validate_by_regexp_short(self):
+            """Тест короткого пароля"""
+            with self.assertRaises(ValueError):
+                Backend.validate_by_regexp('V1d')
+
+        def test_validate_by_regexp_no_number(self):
+            """Тест пароля без цифр"""
+            with self.assertRaises(ValueError):
+                Backend.validate_by_regexp('Invalid')
+
+        def test_validate_by_regexp_no_uppercase(self):
+            """Тест пароля без букв в верхнем регистре"""
+            with self.assertRaises(ValueError):
+                Backend.validate_by_regexp('invalid123')
+
+        def test_validate_by_regexp_no_lowercase(self):
+            """Тест пароля без букв в нижнем регистре"""
+            with self.assertRaises(ValueError):
+                Backend.validate_by_regexp('INVALID123')
 
 
 if __name__ == "__main__":
