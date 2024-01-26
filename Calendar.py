@@ -33,10 +33,10 @@ class Calendar:
         }
 
     @staticmethod
-    def from_dict(data, backend):
+    def from_dict(data):
         calendar = Calendar(data["owner"])
-        calendar._events = [Event.create_or_get_event(event_data, backend) for event_data in data["events"]]
-        calendar._unprocessed_events = [Event.create_or_get_event(event_data, backend) for event_data in data["unprocessed_events"]]
+        calendar._events = [Event.create_or_get_event(event_data) for event_data in data["events"]]
+        calendar._unprocessed_events = [Event.create_or_get_event(event_data) for event_data in data["unprocessed_events"]]
         return calendar
 
     @property
@@ -70,11 +70,12 @@ class Calendar:
         start_date = start_date
         end_date = end_date
         for event in sorted(self.events, key=lambda x: x.start_time):
+            print(event)
             if event.start_time > end_date:
                 break
             if rec_dct[event.recurrence]:
                 freq_rule = rrule(rec_dct[event.recurrence], dtstart=event.start_time)
-                for dt in sorted(freq_rule.between(start_date, end_date)):
+                for dt in sorted(freq_rule.between(start_date - timedelta(seconds=1), end_date + timedelta(seconds=1))): # границы диапазона не включаются в выборку
                     daily_events[dt.strftime('%a, %d.%m.%Y')].append(event.generate_periodic_event(dt, dt + event.get_timing()))
                 # result.extend(event.generate_periodic_event(dt, dt + event.get_timing()) for dt in freq_rule.between(start_date, end_date))
             else:

@@ -87,9 +87,9 @@ class Backend:
     def create_user(self, username, password):
         try:
             user = User(username, self.hash_password(password))
-            print("Учетная запись создана успешно.")
             self.users[username] = user
             self.login(username, password)
+            return user
         except Exception as e:
             print(str(e))
 
@@ -121,7 +121,7 @@ class Backend:
 
 
     @staticmethod
-    def validate_pass_by_regexp(password, prompt):
+    def validate_pass_by_regexp(password, prompt=None):
         """Валидация пароля по регулярному выражению."""
         pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$'
         if not re.match(pattern, password):
@@ -130,7 +130,7 @@ class Backend:
             return password
 
     @staticmethod
-    def validate_date_format(date_text, prompt, format='%d.%m.%Y %H:%M'):
+    def validate_date_format(date_text, prompt=None, format='%d.%m.%Y %H:%M'):
         """Validates that the date_text is in the specified format."""
         try:
             return datetime.strptime(date_text, format)
@@ -146,9 +146,8 @@ class Backend:
             raise ValueError('Время окончания события не может быть раньше времени начала.')
 
     @staticmethod
-    def validate_recurrence(recurrence, prompt):
+    def validate_recurrence(recurrence, prompt=None):
         """Проверить, что введенная частота повторений соответствует одному из допустимых значений."""
-        print(recurrence, prompt, Backend.validate_number_input(recurrence, prompt))
         if Backend.validate_number_input(recurrence, prompt):
 
             return Event.formate_recurrence(recurrence)
@@ -157,7 +156,7 @@ class Backend:
 
 
     def invite_participants(self, event, participants):
-        if self.logged_in_user== event.organizer:
+        if self.logged_in_user == event.organizer:
             for participant in participants:
                 if participant.username in self.calendars:
                     try:
@@ -185,7 +184,7 @@ class Backend:
         else:
             raise PermissionError('У вас нет прав доступа.')
 
-    def validate_participants(self, participants, prompt):
+    def validate_participants(self, participants, prompt=None):
         if participants:
             participants_list = participants.split()
             if all(self.check_username_exists(username) for username in participants_list):
@@ -214,13 +213,13 @@ class Backend:
         # event.owner.notify()
 
     @staticmethod
-    def validate_number_input(user_input, prompt):
+    def validate_number_input(user_input, prompt=None):
         if user_input in re.findall(r'.*?(\d):.*?', prompt):
             return user_input
         else:
             raise ValueError('Некорректный ввод.')
     @staticmethod
-    def validate_str_input(user_input, prompt):
+    def validate_str_input(user_input, prompt=None):
         if user_input.lower() in re.findall(r'\(([^)]+)\)', prompt)[0].split('/'):
             return user_input
         else:

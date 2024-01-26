@@ -7,6 +7,7 @@ import hashlib
 import uuid
 
 class User:
+    _users_by_username = {}  # словарь для хранения пользователей по username
     _usernames = set()  # множество на уровне класса для контроля уникальности username
 
     def __init__(self, username, password):
@@ -16,13 +17,18 @@ class User:
         self._password = password
         self._user_id = str(uuid.uuid4())  # генерирует уникальное id
         User._usernames.add(username)
+        User._users_by_username[username] = self
         self._notifications = []
+
 
     def __repr__(self):
         return self.username
 
     def __str__(self):
         return self.username
+    @classmethod
+    def get_user_by_username(cls, username):
+        return cls._users_by_username.get(username)
 
     def __eq__(self, other):
         if isinstance(other, User):

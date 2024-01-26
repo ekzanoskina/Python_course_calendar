@@ -83,6 +83,7 @@ class Interface:
                     """Придумайте пароль.Пароль должен содержать восемь и более символов,\nвключая не менее одной цифры, одной буквы в верхнем регистре и одной буквы в нижнем регистре.\n""",
                     Interface.backend.validate_pass_by_regexp)
                 Interface.backend.create_user(username, password)
+                print("Учетная запись создана успешно.")
                 Interface.backend.save_user_data()
                 Interface.func_request.append(Interface.main_menu)
                 break

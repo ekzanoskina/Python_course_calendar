@@ -75,23 +75,25 @@ class Event:
 
 
     @classmethod
-    def create_or_get_event(cls, data, backend):
+    def create_or_get_event(cls, data):
         """
         Create an Event instance from its serialized dictionary representation.
         """
         data['start_time'] = datetime.fromisoformat(data["start_time"]) if data['start_time'] else None
         data['end_time'] = datetime.fromisoformat(data["end_time"]) if data['end_time'] else None
-        data['participants'] = [backend.users[username] for username in data['participants']] if data[
+        data['participants'] = [User.get_user_by_username(username) for username in data['participants']] if data[
             'participants'] else None
-        data['organizer'] = backend.users.get(data['organizer']) if data['organizer'] else None
-        # event_id = f"{data['title']}-{data['organizer']}-{data.get('start_time').isoformat() if data.get('start_time') else ''}"
-        event_id = data.pop('event_id')
-        if event_id in Event.events_map:
-            existing_event = cls.events_map[event_id]
-            existing_event.update_event(**data)
-            return existing_event
-        else:
-            return cls(**data)
+        data['organizer'] = User.get_user_by_username(data['organizer']) if data['organizer'] else None
+        try:
+            event_id = int(data.pop('event_id'))
+            if event_id in cls.events_map:  # Check if the event_id exists in the events_map of the class
+                existing_event = cls.events_map[event_id]
+                existing_event.update_event(**data)
+                return existing_event
+            else:
+                return cls(**data)
+        except:
+            raise NotImplemented
 
     @property
     def start_time(self):
@@ -203,7 +205,6 @@ class Event:
         :param event_id: Unique identifier of the event to be deleted.
         """
         if event.event_id in cls.events_map:
-            print(event.event_id)
             del cls.events_map[event.event_id]
         else:
             raise ValueError(f"No event found with event_id {event.event_id}")

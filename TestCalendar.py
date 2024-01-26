@@ -14,6 +14,12 @@ class TestCalendar(unittest.TestCase):
         self.recurrence = 'daily'
         self.end_time = self.start_time + timedelta(hours=2)
         self.event = Event(title="Meeting", start_time=self.start_time, end_time=self.end_time, description="Test Meeting", organizer=self.test_user, recurrence=self.recurrence)
+    def tearDown(self):
+        # This function will run after each test to clean up any resources used in the test
+        User._usernames.clear()
+        Event.events_map.clear()
+        self.event.participants.clear()
+        Event.count = 1
 
     def test_add_event(self):
         self.calendar.add_event(self.event)
