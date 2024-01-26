@@ -13,6 +13,7 @@ from dateutil.rrule import rrule, WEEKLY, DAILY, MONTHLY, YEARLY
 from Event import Event
 from collections import defaultdict
 
+from Python_course_calendar.Notification import Notification
 from User import User
 
 
@@ -23,13 +24,15 @@ class Calendar:
     def __init__(self, owner:str):
         self._events = []
         self._unprocessed_events = []
+        self._notifications = []
         self._owner = owner
 
     def to_dict(self):
         return {
             "owner": self.owner,
             "events": [event.to_dict() for event in self.events],
-            "unprocessed_events": [event.to_dict() for event in self.unprocessed_events]
+            "unprocessed_events": [event.to_dict() for event in self.unprocessed_events],
+            "notifications": [notification.to_dict() for notification in self.notifications]
         }
 
     @staticmethod
@@ -37,6 +40,7 @@ class Calendar:
         calendar = Calendar(data["owner"])
         calendar._events = [Event.create_or_get_event(event_data) for event_data in data["events"]]
         calendar._unprocessed_events = [Event.create_or_get_event(event_data) for event_data in data["unprocessed_events"]]
+        calendar._notifications = [Notification.from_dict(notification_data) for notification_data in data["notifications"]]
         return calendar
 
     @property
@@ -46,6 +50,10 @@ class Calendar:
     @property
     def unprocessed_events(self):
         return self._unprocessed_events
+
+    @property
+    def notifications(self):
+        return self._notifications
 
     @property
     def owner(self):
@@ -105,4 +113,6 @@ class Calendar:
         if event in self.events:
             self.events.remove(event)
 
+    def notify(self, n: Notification):
+        self.notifications.append(n)
 

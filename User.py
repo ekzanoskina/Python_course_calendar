@@ -6,10 +6,12 @@ import hashlib
 
 import uuid
 
+from Python_course_calendar.Notification import Notification
+
+
 class User:
     _users_by_username = {}  # словарь для хранения пользователей по username
     _usernames = set()  # множество на уровне класса для контроля уникальности username
-
     def __init__(self, username, password):
         if username in User._usernames:
             raise ValueError(f"Username {username} is already taken.")
@@ -18,7 +20,6 @@ class User:
         self._user_id = str(uuid.uuid4())  # генерирует уникальное id
         User._usernames.add(username)
         User._users_by_username[username] = self
-        self._notifications = []
 
 
     def __repr__(self):
@@ -58,9 +59,9 @@ class User:
     def get_password(self):
         return self._password
 
-    def notify(self, message):
-        """Добавить новое уведомление для пользователя."""
-        self.notifications.append(message)
+    # def notify(self, n):
+    #     """Добавить новое уведомление для пользователя."""
+    #     self.notifications.append(n)
 
     def get_notifications(self):
         """Получить уведомления пользователя, очистив очередь уведомлений."""
@@ -68,7 +69,5 @@ class User:
         self.notifications.clear()
         return notifications
 
-    def to_json(self):
-        pass
 
 

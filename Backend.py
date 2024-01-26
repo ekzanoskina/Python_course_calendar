@@ -21,6 +21,7 @@ from typing import List
 
 from Calendar import Calendar
 from Event import Event
+from Python_course_calendar.Notification import Notification
 from User import User
 
 from dateutil.rrule import rrule, DAILY, WEEKLY, MONTHLY, YEARLY
@@ -38,6 +39,9 @@ class Backend:
     calendars = {}
     logged_in_user = None
     current_calendar = None
+    users_storage_file = 'users.csv'
+    calendars_storage_file = 'calendars.json'
+
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -48,8 +52,8 @@ class Backend:
     def load_user_data(self):
         """Load data from CSV files into the class variables."""
         # Load users from the CSV file
-        if os.path.exists('users.csv'):
-            with open('users.csv', mode='r') as file:
+        if os.path.exists(self.users_storage_file):
+            with open(self.users_storage_file, mode='r', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 for row in reader:
                     username = row['username']
@@ -61,21 +65,22 @@ class Backend:
     def save_user_data(self):
         """Save data to CSV files."""
         # Save users to the CSV file
-        with open('users.csv', 'w', newline='') as file:
+        with open(self.users_storage_file, 'w', newline='', encoding='utf-8') as file:
             fieldnames = ['user_id', 'username', 'password']
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             for user in self.users.values():
                 writer.writerow({'user_id': user.user_id, 'username': user.username, 'password': user.get_password()})
 
+
     def save_calendar_data(self):
-        with open('calendars.json', 'w') as f:
+        with open(self.calendars_storage_file, 'w', encoding='utf-8') as f:
             json.dump({username: calendar.to_dict() for username, calendar in self.calendars.items()}, f, indent=4)
 
     def load_calendar_data(self):
-        if os.path.exists('calendars.json'):
-            with open('calendars.json', 'r') as f:
-                self.calendars = {username: Calendar.from_dict(calendar_data, self) for username, calendar_data in
+        if os.path.exists(self.calendars_storage_file):
+            with open(self.calendars_storage_file, 'r', encoding='utf-8') as f:
+                self.calendars = {username: Calendar.from_dict(calendar_data) for username, calendar_data in
                                   json.load(f).items()}
 
 
@@ -157,11 +162,13 @@ class Backend:
 
     def invite_participants(self, event, participants):
         if self.logged_in_user == event.organizer:
+            n = Notification(event.event_id, f"Вы были приглашены на мероприятие '{event.title}'.")
             for participant in participants:
                 if participant.username in self.calendars:
                     try:
-                        self.calendars[participant.username].add_unprocessed_events(event)
-                        participant.notify(f"Вы были приглашены на мероприятие '{event.title}'.")
+                        participant_calendar = self.calendars[participant.username]
+                        participant_calendar.add_unprocessed_events(event)
+                        participant_calendar.notify(n)
                     except Exception as e:
                         print(str(e))
         else:
@@ -242,9 +249,6 @@ class Backend:
         print('Событие успешно создано и добавлено в Ваш календарь.')
         return event
 
-    def notify_participants(self):
-        pass
-
     def get_events_in_range(self, start_date, end_date):
         return self.current_calendar.get_events_in_range(start_date, end_date)
 
@@ -304,6 +308,19 @@ class Backend:
             print('Вы успешно удалили событие.')
         else:
             raise PermissionError('Вы не можете удалить событие, так как не являетесь организатором.')
+
+    def get_unread_notifications(self):
+        unread_notifications = list(filter(lambda n:n.status == 'unread', self.current_calendar.notifications))
+        if unread_notifications:
+            if len(unread_notifications) > 1:
+                for i, n in enumerate(unread_notifications, 1):
+                    yield f'{i}. {n.message}'
+                    n.status = 'read'
+            else:
+                yield unread_notifications[0].message
+
+        else:
+            yield 'У вас нет непрочитанных уведомлений.'
 
 
 

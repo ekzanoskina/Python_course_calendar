@@ -35,18 +35,6 @@ class TestUser(unittest.TestCase):
         user = User("user5", "password123")
         self.assertEqual(hash(user), hash(user.user_id))
 
-    def test_notifications(self):
-        user = User("user6", "password123")
-        self.assertEqual(len(user.notifications), 0)
-
-        user.notify("Welcome!")
-        user.notify("You have a new message.")
-
-        self.assertEqual(len(user.notifications), 2)
-
-        notifications = user.get_notifications()
-        self.assertEqual(notifications, ["Welcome!", "You have a new message."])
-        self.assertEqual(len(user.notifications), 0)  # Should be cleared after getting notifications
 
     def test_class_method_is_username_taken(self):
         username = "user7"

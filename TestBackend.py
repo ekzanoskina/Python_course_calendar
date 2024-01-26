@@ -1,3 +1,5 @@
+import csv
+import json
 import os
 import unittest
 import uuid
@@ -18,6 +20,8 @@ from User import User
 class TestBackend(unittest.TestCase):
     def setUp(self):
         self.backend = Backend()
+        self.backend.users_storage_file = 'test_users.csv'
+        self.backend.calendars_storage_file = 'test_calendars.json'
         self.organizer = User("johndoe", "Johndoe123")
         self.backend.logged_in_user = self.organizer
         self.backend.current_calendar = self.backend.get_calendar(self.organizer)
@@ -37,7 +41,7 @@ class TestBackend(unittest.TestCase):
         Event.events_map.clear()
         Event.count = 1
         # self.event.participants.clear()
-        self.backend = None
+        self.backend.users.clear()
 
     def test_singleton(self):
         """Test the Backend class is a singleton."""
@@ -134,21 +138,6 @@ class TestBackend(unittest.TestCase):
         with self.assertRaises(ValueError):
             Backend.validate_pass_by_regexp('INVALID123')
 
-    # def test_load_user_data(self):
-    #     self.backend.load_user_data()
-    #     self.assertIn(self.organizer.username, self.backend.users)
-    #
-    # def test_save_user_data(self):
-    #     self.backend.save_user_data()
-    #     self.assertTrue(os.path.exists('users.csv'))
-    #
-    # def test_load_calendar_data(self):
-    #     self.backend.load_calendar_data()
-    #     self.assertTrue(self.backend.calendars)
-    #
-    # def test_save_calendar_data(self):
-    #     self.backend.save_calendar_data()
-    #     self.assertTrue(os.path.exists('calendars.json'))
 
     def test_manage_unprocessed_evens(self):
         self.backend.logged_in_user = self.participant
@@ -207,6 +196,95 @@ class TestBackend(unittest.TestCase):
         self.backend.delete_event(self.event)
         self.assertNotIn(self.event, self.backend.current_calendar.events)
 
+    def test_load_user_data(self):
+        # Create a temporary CSV file with test user data
+        test_user_data = [
+            {'username': 'test_user1', 'password': 'Password1'},
+            {'username': 'test_user2', 'password': 'Password2'}
+        ]
+        with open('test_users.csv', 'w', newline='') as file:
+            fieldnames = ['username', 'password']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for user in test_user_data:
+                writer.writerow(user)
 
+        # Set the temporary CSV file as the users_storage_file
+        self.backend.users_storage_file = 'test_users.csv'
+
+        # Call the load_user_data method
+        self.backend.load_user_data()
+
+        # Check that the users dictionary has been updated correctly
+        self.assertEqual(len(self.backend.users), 2)
+        self.assertIn('test_user1', self.backend.users)
+        self.assertIn('test_user2', self.backend.users)
+
+        # Clean up the temporary CSV file
+        os.remove('test_users.csv')
+
+    def test_save_user_data(self):
+        # Add test user data to the users dictionary
+        self.backend.users = {
+            'test_user1': User('test_user1', 'Password1'),
+            'test_user2': User('test_user2', 'Password2')
+        }
+
+        # Call the save_user_data method
+        self.backend.save_user_data()
+
+        # Read the CSV file and check that it matches the class variables
+        with open(self.backend.users_storage_file, mode='r') as file:
+            reader = csv.DictReader(file)
+            saved_users = [row for row in reader]
+
+        self.assertEqual(len(saved_users), 2)
+        self.assertEqual(saved_users[0]['username'], 'test_user1')
+        self.assertEqual(saved_users[0]['password'], 'Password1')
+        self.assertEqual(saved_users[1]['username'], 'test_user2')
+        self.assertEqual(saved_users[1]['password'], 'Password2')
+        os.remove('test_users.csv')
+
+
+
+    def test_save_calendar_data(self):
+        # Add test calendar data to the calendars dictionary
+        self.backend.calendars = {
+            'test_user1': Calendar('test_user1'),
+            'test_user2': Calendar('test_user2')
+        }
+
+        # Call the save_calendar_data method
+        self.backend.save_calendar_data()
+
+        # Read the JSON file and check that it matches the class variables
+        with open(self.backend.calendars_storage_file, 'r') as f:
+            saved_calendars = json.load(f)
+
+        self.assertEqual(len(saved_calendars), 2)
+        self.assertIn('test_user1', saved_calendars)
+        self.assertIn('test_user2', saved_calendars)
+        os.remove('test_calendars.json')
+
+    def test_load_calendar_data(self):
+        self.backend.calendars = {
+            'test_user1': Calendar('test_user1'),
+            'test_user2': Calendar('test_user2')
+        }
+
+        # Call the save_calendar_data method
+        self.backend.save_calendar_data()
+
+
+        # Call the load_calendar_data method
+        self.backend.load_calendar_data()
+
+        # Check that the calendars dictionary has been updated correctly
+        self.assertEqual(len(self.backend.calendars), 2)
+        self.assertIn('test_user1', self.backend.calendars)
+        self.assertIn('test_user2', self.backend.calendars)
+
+        # Clean up the temporary JSON file
+        os.remove('test_calendars.json')
 if __name__ == "__main__":
     unittest.main()

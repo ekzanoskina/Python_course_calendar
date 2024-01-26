@@ -97,7 +97,6 @@ class Interface:
         password = input('Введите пароль: ')
         try:
             Interface.backend.login(username, password)
-            sleep(1)
             Interface.backend.save_calendar_data()
             Interface.func_request.append(Interface.show_notifications)
             Interface.func_request.append(Interface.manage_unprocessed_evens)
@@ -336,21 +335,17 @@ class Interface:
             'Вы действительно хотите покинуть событие? (да/нет): ', Interface.backend.validate_str_input)
         if leave_confirmation == 'да':
             Interface.backend.leave_event(event_for_change)
-            Interface.func_request.append(Interface.start)
+            Interface.func_request.append(Interface.main_menu)
         elif leave_confirmation == 'нет':
             Interface.func_request.append(Interface.main_menu)
         Interface.backend.save_calendar_data()
 
     @staticmethod
     def show_notifications():
-        pass
-        # notifications = Interface.logged_in_user.get_notifications()
-        # print("Ваши уведомления:")
-        # for notification in notifications:
-        #     print(notification)
-
-    # Interface.backend.save_calendar_data()
-    # Interface.backend.save_user_data()
+        notifications = Interface.backend.get_unread_notifications()
+        for n in notifications:
+            print(n)
+        Interface.backend.save_calendar_data()
 
 
 Interface.work()
