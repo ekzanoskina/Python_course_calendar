@@ -2,11 +2,7 @@
 Пользователь - имеет логин и пароль, а так же календарь.
 у пользователя есть итендифекатор начинающийся с @
 """
-import hashlib
-
 import uuid
-
-from Python_course_calendar.Notification import Notification
 
 
 class User:
@@ -29,6 +25,7 @@ class User:
         return self.username
     @classmethod
     def get_user_by_username(cls, username):
+        """Получить пользователя по имени пользователя из словаря _users_by_username."""
         return cls._users_by_username.get(username)
 
     def __eq__(self, other):
@@ -37,6 +34,7 @@ class User:
         return False
 
     def __hash__(self):
+        """Хэширует идентификатор пользователя."""
         return hash(self.user_id)
 
     @property
@@ -45,29 +43,16 @@ class User:
 
     @classmethod
     def is_username_taken(cls, username):
+        """Проверяет, занято ли указанное имя пользователя."""
         return username in cls._usernames
 
     @property
     def user_id(self):
         return self._user_id
 
-    @property
-    def notifications(self):
-        return self._notifications
-
-
     def get_password(self):
+        """Получить пароль пользователя."""
         return self._password
-
-    # def notify(self, n):
-    #     """Добавить новое уведомление для пользователя."""
-    #     self.notifications.append(n)
-
-    def get_notifications(self):
-        """Получить уведомления пользователя, очистив очередь уведомлений."""
-        notifications = self.notifications.copy()
-        self.notifications.clear()
-        return notifications
 
 
 

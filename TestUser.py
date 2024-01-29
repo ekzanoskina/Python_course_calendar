@@ -42,10 +42,6 @@ class TestUser(unittest.TestCase):
         User(username, "password123")
         self.assertTrue(User.is_username_taken(username))
 
-    def test_json(self):
-        # This test is not implemented as the method `to_json` is not defined
-        # You would put here the test for the to_json method
-        pass
 
 
 if __name__ == '__main__':

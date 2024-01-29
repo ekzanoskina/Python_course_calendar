@@ -11,7 +11,7 @@ class TestCalendar(unittest.TestCase):
         self.test_user = User('test_username', "test123456789")
         self.calendar = Calendar(owner=self.test_user)
         self.start_time = datetime.now()
-        self.recurrence = 'daily'
+        self.recurrence = 'каждый день'
         self.end_time = self.start_time + timedelta(hours=2)
         self.event = Event(title="Meeting", start_time=self.start_time, end_time=self.end_time, description="Test Meeting", organizer=self.test_user, recurrence=self.recurrence)
     def tearDown(self):
