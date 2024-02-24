@@ -21,7 +21,7 @@ from typing import List
 
 from Calendar import Calendar
 from Event import Event
-from Python_course_calendar.Notification import Notification
+from Notification import Notification
 from User import User
 
 class AuthenticationError(Exception):
@@ -113,6 +113,18 @@ class Backend:
         password, salt = hashed_password.split(':')
         return password == hashlib.sha256(salt.encode() + user_password.encode()).hexdigest()
 
+    def drop_password(self, username, password):
+        """Сброс пароля."""
+        if self.check_username_exists(username):
+            if self.validate_pass_by_regexp(password):
+
+                user = self.users.get(username)
+                user.set_password(self.hash_password(password))
+            else:
+                raise ValueError('Пароль долен содержать не менее 8 символов, включая цифру и строчную букву.')
+        else:
+            raise ValueError('Пользователь с таким именем не найден.')
+
     def login(self, username, password):
         """Аутентифицирует пользователя."""
         if username not in self.users or not self.check_password(self.users[username].get_password(), password):
@@ -126,6 +138,7 @@ class Backend:
         """Выход пользователя из системы."""
         self.logged_in_user = None
         self.current_calendar = None
+
 
 
     @staticmethod
