@@ -17,6 +17,8 @@ class User:
         User._usernames.add(username)
         User._users_by_username[username] = self
 
+    def set_password(self, password):
+        self._password = password
 
     def __repr__(self):
         return self.username
